@@ -1,0 +1,115 @@
+# AWS Resources Configuration
+region: us-east-1
+
+# S3 Buckets Configuration
+s3_buckets:
+  - name: bootstrap-test-bucket
+    versioning: enabled
+    encryption: AES256
+    cors:
+      allowed_origins:
+        - "https://example.com"
+        - "https://www.example.com"
+      allowed_methods:
+        - "GET"
+        - "PUT"
+        - "POST"
+      allowed_headers:
+        - "*"
+      max_age_seconds: 3000
+    policy: >
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::bootstrap-test-bucket/*",
+            "Condition": {
+              "StringLike": {
+                "aws:Referer": "https://example.com/*"
+              }
+            }
+          }
+        ]
+      }
+  
+  - name: bootstrap-test-bucket-2
+    versioning: enabled
+    encryption: AES256
+    cors:
+      allowed_origins:
+        - "https://dev.example.com"
+      allowed_methods:
+        - "GET"
+        - "PUT"
+        - "POST"
+      allowed_headers:
+        - "*"
+      max_age_seconds: 3000
+
+# ECR Repositories Configuration
+ecr_repositories:
+  - name: bootstrap-test-ecr-1
+    lifecycle_policy: >
+      {
+        "rules": [
+          {
+            "rulePriority": 1,
+            "description": "Keep last 100 images",
+            "selection": {
+              "tagStatus": "any",
+              "countType": "imageCountMoreThan",
+              "countNumber": 100
+            },
+            "action": {
+              "type": "expire"
+            }
+          }
+        ]
+      }
+  
+  - name: bootstrap-test-ecr-2
+    lifecycle_policy: >
+      {
+        "rules": [
+          {
+            "rulePriority": 1,
+            "description": "Keep last 100 images",
+            "selection": {
+              "tagStatus": "any",
+              "countType": "imageCountMoreThan",
+              "countNumber": 100
+            },
+            "action": {
+              "type": "expire"
+            }
+          }
+        ]
+      }
+
+# IAM Users Configuration
+iam_users:
+  - name: s3-bootstrap-test-bucket-user
+    policies:
+      - name: s3-bootstrap-test-bucket-policy
+        description: "Policy to allow access to S3 buckets"
+        policy_document: >
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:GetObject",
+                  "s3:PutObject",
+                  "s3:ListBucket"
+                ],
+                "Resource": [
+                  "arn:aws:s3:::bootstrap-test-bucket",
+                  "arn:aws:s3:::bootstrap-test-bucket/*"
+                ]
+              }
+            ]
+          }
