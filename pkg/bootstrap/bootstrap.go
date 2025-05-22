@@ -125,9 +125,10 @@ func (b *Bootstrapper) CreateS3Buckets(buckets []S3Bucket) error {
 				},
 			})
 			if err != nil {
-				return fmt.Errorf("failed to enable versioning for bucket %s: %w", bucket.Name, err)
+				fmt.Printf("⚠️ Warning: failed to enable versioning for bucket %s: %v\n", bucket.Name, err)
+			} else {
+				fmt.Printf("✅ Enabled versioning for bucket: %s\n", bucket.Name)
 			}
-			fmt.Printf("✅ Enabled versioning for bucket: %s\n", bucket.Name)
 		}
 
 		// Configure encryption
@@ -145,9 +146,10 @@ func (b *Bootstrapper) CreateS3Buckets(buckets []S3Bucket) error {
 				},
 			})
 			if err != nil {
-				return fmt.Errorf("failed to configure encryption for bucket %s: %w", bucket.Name, err)
+				fmt.Printf("⚠️ Warning: failed to configure encryption for bucket %s: %v\n", bucket.Name, err)
+			} else {
+				fmt.Printf("✅ Configured encryption for bucket: %s\n", bucket.Name)
 			}
-			fmt.Printf("✅ Configured encryption for bucket: %s\n", bucket.Name)
 		}
 
 		// Configure CORS
@@ -169,9 +171,10 @@ func (b *Bootstrapper) CreateS3Buckets(buckets []S3Bucket) error {
 				},
 			})
 			if err != nil {
-				return fmt.Errorf("failed to configure CORS for bucket %s: %w", bucket.Name, err)
+				fmt.Printf("⚠️ Warning: failed to configure CORS for bucket %s: %v\n", bucket.Name, err)
+			} else {
+				fmt.Printf("✅ Configured CORS for bucket: %s\n", bucket.Name)
 			}
-			fmt.Printf("✅ Configured CORS for bucket: %s\n", bucket.Name)
 		}
 
 		// Configure bucket policy
@@ -181,9 +184,10 @@ func (b *Bootstrapper) CreateS3Buckets(buckets []S3Bucket) error {
 				Policy: aws.String(bucket.Policy),
 			})
 			if err != nil {
-				return fmt.Errorf("failed to set policy for bucket %s: %w", bucket.Name, err)
+				fmt.Printf("⚠️ Warning: failed to set policy for bucket %s: %v\n", bucket.Name, err)
+			} else {
+				fmt.Printf("✅ Set policy for bucket: %s\n", bucket.Name)
 			}
-			fmt.Printf("✅ Set policy for bucket: %s\n", bucket.Name)
 		}
 	}
 
@@ -222,9 +226,10 @@ func (b *Bootstrapper) CreateECRRepositories(repositories []ECRRepository) error
 				LifecyclePolicyText: aws.String(repo.LifecyclePolicy),
 			})
 			if err != nil {
-				return fmt.Errorf("failed to set lifecycle policy for ECR repository %s: %w", repo.Name, err)
+				fmt.Printf("⚠️ Warning: failed to set lifecycle policy for ECR repository %s: %v\n", repo.Name, err)
+			} else {
+				fmt.Printf("✅ Set lifecycle policy for ECR repository: %s\n", repo.Name)
 			}
-			fmt.Printf("✅ Set lifecycle policy for ECR repository: %s\n", repo.Name)
 		}
 	}
 
@@ -269,16 +274,22 @@ func (b *Bootstrapper) CreateIAMUsersAndPolicies(users []IAMUser) error {
 				PolicyArn: aws.String(policyArn),
 			})
 			if err != nil {
-				return fmt.Errorf("failed to attach policy %s to user %s: %w", policy.Name, user.Name, err)
+				// Check if policy is already attached (which is fine)
+				if strings.Contains(err.Error(), "EntityAlreadyExists") {
+					fmt.Printf("✅ Policy %s already attached to user %s\n", policy.Name, user.Name)
+				} else {
+					fmt.Printf("⚠️ Warning: failed to attach policy %s to user %s: %v\n", policy.Name, user.Name, err)
+				}
+			} else {
+				fmt.Printf("✅ Attached policy %s to user %s\n", policy.Name, user.Name)
 			}
-			fmt.Printf("✅ Attached policy %s to user %s\n", policy.Name, user.Name)
 		}
 	}
 
 	return nil
 }
 
-// createIAMPolicy creates an IAM policy and returns its ARN
+// createIAMPolicy creates or updates an IAM policy and returns its ARN
 func (b *Bootstrapper) createIAMPolicy(iamClient *iam.Client, userName string, policy IAMPolicy) (string, error) {
 	// Create policy name with user prefix to avoid conflicts
 	fullPolicyName := fmt.Sprintf("%s-%s", userName, policy.Name)
@@ -293,8 +304,23 @@ func (b *Bootstrapper) createIAMPolicy(iamClient *iam.Client, userName string, p
 
 	for _, p := range listPoliciesOutput.Policies {
 		if *p.PolicyName == fullPolicyName {
-			fmt.Printf("✅ IAM policy %s already exists\n", fullPolicyName)
-			return *p.Arn, nil
+			fmt.Printf("✅ IAM policy %s already exists, updating policy document\n", fullPolicyName)
+			
+			// Get the policy version to update
+			policyArn := *p.Arn
+			
+			// Create a new version of the policy (this effectively updates it)
+			_, err := iamClient.CreatePolicyVersion(b.ctx, &iam.CreatePolicyVersionInput{
+				PolicyArn:      aws.String(policyArn),
+				PolicyDocument: aws.String(policy.PolicyDocument),
+				SetAsDefault:   true,
+			})
+			if err != nil {
+				return "", fmt.Errorf("failed to update IAM policy %s: %w", fullPolicyName, err)
+			}
+			
+			fmt.Printf("✅ Updated IAM policy: %s\n", fullPolicyName)
+			return policyArn, nil
 		}
 	}
 

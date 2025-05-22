@@ -3,7 +3,7 @@ region: us-east-1
 
 # S3 Buckets Configuration
 s3_buckets:
-  - name: bootstrap-test-bucket
+  - name: bootstrap-test-bucket-1
     versioning: enabled
     encryption: AES256
     cors:
@@ -28,7 +28,7 @@ s3_buckets:
             "Effect": "Allow",
             "Principal": "*",
             "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::bootstrap-test-bucket/*",
+            "Resource": "arn:aws:s3:::bootstrap-test-bucket-1/*",
             "Condition": {
               "StringLike": {
                 "aws:Referer": "https://example.com/*"
@@ -38,22 +38,30 @@ s3_buckets:
         ]
       }
   
-  - name: bootstrap-test-bucket-2
-    versioning: enabled
-    encryption: AES256
-    cors:
-      allowed_origins:
-        - "https://dev.example.com"
-      allowed_methods:
-        - "GET"
-        - "PUT"
-        - "POST"
-      allowed_headers:
-        - "*"
-      expose_headers:
-        - "ETag"
-        - "Content-Length"
-      max_age_seconds: 3000
+# IAM Users Configuration
+iam_users:
+  - name: s3-bootstrap-test-bucket-user
+    policies:
+      - name: access-policy
+        description: "Policy to allow access to S3 buckets"
+        policy_document: >
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:GetObject",
+                  "s3:PutObject",
+                  "s3:ListBucket"
+                ],
+                "Resource": [
+                  "arn:aws:s3:::bootstrap-test-bucket-1",
+                  "arn:aws:s3:::bootstrap-test-bucket-1/*"
+                ]
+              }
+            ]
+          }
 
 # ECR Repositories Configuration
 ecr_repositories:
@@ -95,27 +103,4 @@ ecr_repositories:
         ]
       }
 
-# IAM Users Configuration
-iam_users:
-  - name: s3-bootstrap-test-bucket-user
-    policies:
-      - name: access-policy
-        description: "Policy to allow access to S3 buckets"
-        policy_document: >
-          {
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Action": [
-                  "s3:GetObject",
-                  "s3:PutObject",
-                  "s3:ListBucket"
-                ],
-                "Resource": [
-                  "arn:aws:s3:::bootstrap-test-bucket",
-                  "arn:aws:s3:::bootstrap-test-bucket/*"
-                ]
-              }
-            ]
-          }
+
