@@ -47,6 +47,9 @@ s3_buckets:
         - "PUT"
       allowed_headers:
         - "*"
+      expose_headers:
+        - "ETag"
+        - "Content-Length"
       max_age_seconds: 3000
     policy: >
       {
@@ -123,6 +126,7 @@ CORS (Cross-Origin Resource Sharing) can be configured for each S3 bucket with:
 - Allowed origins
 - Allowed methods
 - Allowed headers
+- Expose headers
 - Max age seconds
 
 ### S3 Bucket Policies
