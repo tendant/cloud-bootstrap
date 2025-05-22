@@ -112,6 +112,32 @@ iam_users:
 
 ## Features
 
+### RDS PostgreSQL Database Support
+
+The tool supports managing PostgreSQL RDS instances, including:
+- Creating new database instances
+- Modifying existing database storage size
+- Configuring database parameters
+
+```yaml
+rds_instances:
+  - identifier: my-postgres-db
+    engine: postgres
+    engine_version: "14.5"
+    instance_class: db.t3.micro
+    storage_type: gp2
+    allocated_storage: 20  # Size in GB
+    db_name: mydb
+    master_username: dbadmin
+    master_password: "{{YOUR_PASSWORD_HERE}}"
+    publicly_accessible: false
+    backup_retention_period: 7
+    multi_az: false
+    skip_final_snapshot: true
+```
+
+> **Note**: To use the RDS functionality, you need to install the AWS SDK RDS package with: `go get github.com/aws/aws-sdk-go-v2/service/rds`
+
 ### S3 Bucket Creation
 
 The tool can create S3 buckets with the following configurations:

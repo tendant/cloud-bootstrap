@@ -6,6 +6,7 @@ type Config struct {
 	S3Buckets       []S3Bucket      `yaml:"s3_buckets"`
 	ECRRepositories []ECRRepository `yaml:"ecr_repositories"`
 	IAMUsers        []IAMUser       `yaml:"iam_users"`
+	RDSInstances    []RDSInstance   `yaml:"rds_instances,omitempty"`
 }
 
 // S3Bucket represents an S3 bucket configuration
@@ -43,4 +44,21 @@ type IAMPolicy struct {
 	Name           string `yaml:"name"`
 	Description    string `yaml:"description"`
 	PolicyDocument string `yaml:"policy_document"`
+}
+
+// RDSInstance represents an RDS database instance configuration
+type RDSInstance struct {
+	Identifier       string `yaml:"identifier"`
+	Engine           string `yaml:"engine"`
+	EngineVersion    string `yaml:"engine_version,omitempty"`
+	InstanceClass    string `yaml:"instance_class"`
+	StorageType      string `yaml:"storage_type,omitempty"`
+	AllocatedStorage int    `yaml:"allocated_storage"`
+	DBName           string `yaml:"db_name"`
+	MasterUsername   string `yaml:"master_username,omitempty"`
+	MasterPassword   string `yaml:"master_password,omitempty"`
+	PubliclyAccessible bool  `yaml:"publicly_accessible,omitempty"`
+	BackupRetentionPeriod int `yaml:"backup_retention_period,omitempty"`
+	MultiAZ          bool   `yaml:"multi_az,omitempty"`
+	SkipFinalSnapshot bool  `yaml:"skip_final_snapshot,omitempty"`
 }

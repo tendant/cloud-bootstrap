@@ -86,4 +86,19 @@ ecr_repositories:
         ]
       }
 
+# RDS Instances Configuration
+rds_instances:
+  - identifier: bootstrap-postgres-db
+    engine: postgres
+    engine_version: "14.5"
+    instance_class: db.t3.micro
+    storage_type: gp2
+    allocated_storage: 20
+    db_name: bootstrapdb
+    master_username: dbadmin
+    master_password: "{{YOUR_PASSWORD_HERE}}"
+    publicly_accessible: false
+    backup_retention_period: 7
+    multi_az: false
+    skip_final_snapshot: true
 
