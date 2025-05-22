@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 
 # Build the application with optimizations
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o cloud-bootstrap .
+RUN CGO_ENABLED=0 GOOS=linux go build -o cloud-bootstrap .
 
 # Use a minimal alpine image for the final container
 FROM alpine:3.20
