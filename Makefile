@@ -1,7 +1,22 @@
+VERSION ?= $(shell git describe --tags --always --dirty)
+
 .PHONY: test test-unit test-integration run clean
 
 # Default target
 all: test run
+
+# Build Docker image
+docker-build:
+	docker build -t cloud-bootstrap .
+
+docker-push:
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--push \
+		--tag wang/cloud-bootstrap:$(VERSION) \
+		--tag wang/cloud-bootstrap:latest \
+		.
+
 
 # Run the application
 run:
