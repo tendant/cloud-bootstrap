@@ -93,7 +93,7 @@ ecr_repositories:
 iam_users:
   - name: s3-bootstrap-test-bucket-user
     policies:
-      - name: s3-bootstrap-test-bucket-policy
+      - name: access-policy
         description: "Policy to allow access to S3 buckets"
         policy_document: >
           {
