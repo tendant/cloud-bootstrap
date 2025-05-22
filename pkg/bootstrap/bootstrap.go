@@ -157,6 +157,7 @@ func (b *Bootstrapper) CreateS3Buckets(buckets []S3Bucket) error {
 					AllowedOrigins: bucket.CORS.AllowedOrigins,
 					AllowedMethods: convertToMethodsEnum(bucket.CORS.AllowedMethods),
 					AllowedHeaders: bucket.CORS.AllowedHeaders,
+					ExposeHeaders:  bucket.CORS.ExposeHeaders,
 					MaxAgeSeconds:  aws.Int32(int32(bucket.CORS.MaxAgeSeconds)),
 				},
 			}

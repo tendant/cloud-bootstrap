@@ -16,6 +16,9 @@ s3_buckets:
         - "POST"
       allowed_headers:
         - "*"
+      expose_headers:
+        - "ETag"
+        - "Content-Length"
       max_age_seconds: 3000
     policy: >
       {
@@ -47,6 +50,9 @@ s3_buckets:
         - "POST"
       allowed_headers:
         - "*"
+      expose_headers:
+        - "ETag"
+        - "Content-Length"
       max_age_seconds: 3000
 
 # ECR Repositories Configuration
