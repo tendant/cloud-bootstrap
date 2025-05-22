@@ -205,6 +205,29 @@ policy_document: >
 go run main.go
 ```
 
+## Docker Usage
+
+You can also run the application using Docker:
+
+### Building the Docker Image
+
+```bash
+docker build -t cloud-bootstrap .
+```
+
+### Running with Docker
+
+```bash
+# Mount your AWS credentials and configuration file
+docker run -v ~/.aws:/root/.aws -v $(pwd)/aws-resources.yaml:/app/config/aws-resources.yaml cloud-bootstrap
+
+# Run with custom config path
+docker run -v ~/.aws:/root/.aws -v $(pwd):/app/config cloud-bootstrap --config /app/config/my-custom-config.yaml
+
+# Run in dry-run mode
+docker run -v ~/.aws:/root/.aws -v $(pwd):/app/config cloud-bootstrap --dry-run
+```
+
 3. The application will create all resources defined in the configuration file
 
 ## Contributing
