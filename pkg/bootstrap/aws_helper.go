@@ -12,7 +12,9 @@ import (
 
 // CheckAWSCredentials validates AWS credentials and returns information about the authenticated user
 func CheckAWSCredentials(ctx context.Context, region string) (string, error) {
-	// Load AWS configuration
+	// Load AWS configuration with environment variables prioritized
+	// The AWS SDK's default credential provider chain checks environment variables first,
+	// then falls back to other sources like instance role
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(region),
 		config.WithRetryMaxAttempts(3),
@@ -33,12 +35,12 @@ func CheckAWSCredentials(ctx context.Context, region string) (string, error) {
 			"~/.aws/credentials file",
 			"EC2 instance profile or ECS task role",
 		}
-		
+
 		var credInfo string
 		for _, source := range credSources {
 			credInfo += fmt.Sprintf("  - %s\n", source)
 		}
-		
+
 		return "", fmt.Errorf("failed to validate AWS credentials: %w\n\nCredentials can be configured via:\n%s", err, credInfo)
 	}
 
@@ -51,7 +53,7 @@ func GetAWSProfileInfo() string {
 	if profile == "" {
 		profile = "default"
 	}
-	
+
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		region = os.Getenv("AWS_DEFAULT_REGION")
@@ -59,6 +61,6 @@ func GetAWSProfileInfo() string {
 			region = "unknown"
 		}
 	}
-	
+
 	return fmt.Sprintf("AWS Profile: %s, Region: %s", profile, region)
 }

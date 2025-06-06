@@ -27,6 +27,8 @@ func NewBootstrapper(region string) (*Bootstrapper, error) {
 	ctx := context.TODO()
 
 	// Load AWS configuration with explicit region and retry options
+	// The AWS SDK's default credential provider chain checks environment variables first,
+	// then falls back to other sources like instance role
 	awsConfig, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(region),
 		config.WithRetryMaxAttempts(3),
@@ -311,10 +313,10 @@ func (b *Bootstrapper) createIAMPolicy(iamClient *iam.Client, userName string, p
 	for _, p := range listPoliciesOutput.Policies {
 		if *p.PolicyName == fullPolicyName {
 			fmt.Printf("✅ IAM policy %s already exists, updating policy document\n", fullPolicyName)
-			
+
 			// Get the policy version to update
 			policyArn := *p.Arn
-			
+
 			// Create a new version of the policy (this effectively updates it)
 			_, err := iamClient.CreatePolicyVersion(b.ctx, &iam.CreatePolicyVersionInput{
 				PolicyArn:      aws.String(policyArn),
@@ -324,7 +326,7 @@ func (b *Bootstrapper) createIAMPolicy(iamClient *iam.Client, userName string, p
 			if err != nil {
 				return "", fmt.Errorf("failed to update IAM policy %s: %w", fullPolicyName, err)
 			}
-			
+
 			fmt.Printf("✅ Updated IAM policy: %s\n", fullPolicyName)
 			return policyArn, nil
 		}
@@ -372,45 +374,45 @@ func (b *Bootstrapper) ManageRDSInstances(instances []RDSInstance) error {
 		}
 
 		describeOutput, err := rdsClient.DescribeDBInstances(b.ctx, describeInput)
-		
+
 		if err != nil {
 			// Instance doesn't exist, create it
 			if strings.Contains(err.Error(), "DBInstanceNotFound") {
 				// Create new RDS instance
 				fmt.Printf("Creating new RDS instance: %s\n", instance.Identifier)
-				
+
 				// Set up creation parameters
 				createInput := &rds.CreateDBInstanceInput{
-					DBInstanceIdentifier:    aws.String(instance.Identifier),
-					Engine:                  aws.String(instance.Engine),
-					DBInstanceClass:         aws.String(instance.InstanceClass),
-					AllocatedStorage:        aws.Int32(int32(instance.AllocatedStorage)),
-					DBName:                  aws.String(instance.DBName),
+					DBInstanceIdentifier: aws.String(instance.Identifier),
+					Engine:               aws.String(instance.Engine),
+					DBInstanceClass:      aws.String(instance.InstanceClass),
+					AllocatedStorage:     aws.Int32(int32(instance.AllocatedStorage)),
+					DBName:               aws.String(instance.DBName),
 				}
 
 				// Add optional parameters if provided
 				if instance.EngineVersion != "" {
 					createInput.EngineVersion = aws.String(instance.EngineVersion)
 				}
-				
+
 				if instance.StorageType != "" {
 					createInput.StorageType = aws.String(instance.StorageType)
 				}
-				
+
 				if instance.MasterUsername != "" {
 					createInput.MasterUsername = aws.String(instance.MasterUsername)
 				}
-				
+
 				if instance.MasterPassword != "" {
 					createInput.MasterUserPassword = aws.String(instance.MasterPassword)
 				}
-				
+
 				createInput.PubliclyAccessible = aws.Bool(instance.PubliclyAccessible)
-				
+
 				if instance.BackupRetentionPeriod > 0 {
 					createInput.BackupRetentionPeriod = aws.Int32(int32(instance.BackupRetentionPeriod))
 				}
-				
+
 				createInput.MultiAZ = aws.Bool(instance.MultiAZ)
 
 				// Handle final snapshot setting
@@ -430,7 +432,7 @@ func (b *Bootstrapper) ManageRDSInstances(instances []RDSInstance) error {
 				if err != nil {
 					return fmt.Errorf("failed to create RDS instance %s: %w", instance.Identifier, err)
 				}
-				
+
 				fmt.Printf("✅ Created RDS instance: %s\n", instance.Identifier)
 			} else {
 				// Some other error occurred
@@ -440,75 +442,75 @@ func (b *Bootstrapper) ManageRDSInstances(instances []RDSInstance) error {
 			// Instance exists, check if we need to modify it
 			if len(describeOutput.DBInstances) > 0 {
 				existingInstance := describeOutput.DBInstances[0]
-				
+
 				// Get current storage size (safely handle nil pointer)
 				var currentStorage int32
 				if existingInstance.AllocatedStorage != nil {
 					currentStorage = *existingInstance.AllocatedStorage
 				}
-				
+
 				// Check if storage size needs to be updated
 				if currentStorage != int32(instance.AllocatedStorage) {
-					fmt.Printf("Modifying storage size for RDS instance %s from %d GB to %d GB\n", 
+					fmt.Printf("Modifying storage size for RDS instance %s from %d GB to %d GB\n",
 						instance.Identifier, currentStorage, instance.AllocatedStorage)
-					
+
 					// Check if the instance is in a modifiable state (safely handle nil pointer)
 					var instanceStatus string
 					if existingInstance.DBInstanceStatus != nil {
 						instanceStatus = *existingInstance.DBInstanceStatus
 					}
-					
+
 					if instanceStatus != "available" {
-						fmt.Printf("⚠️ Warning: Cannot modify RDS instance %s because it is in %s state. Must be 'available'.\n", 
+						fmt.Printf("⚠️ Warning: Cannot modify RDS instance %s because it is in %s state. Must be 'available'.\n",
 							instance.Identifier, instanceStatus)
 						continue
 					}
-					
+
 					// Modify the instance storage
 					modifyInput := &rds.ModifyDBInstanceInput{
 						DBInstanceIdentifier: aws.String(instance.Identifier),
 						AllocatedStorage:     aws.Int32(int32(instance.AllocatedStorage)),
 						ApplyImmediately:     aws.Bool(true),
 					}
-					
+
 					_, err = rdsClient.ModifyDBInstance(b.ctx, modifyInput)
 					if err != nil {
 						fmt.Printf("⚠️ Warning: failed to modify storage for RDS instance %s: %v\n", instance.Identifier, err)
 					} else {
-						fmt.Printf("✅ Modified storage for RDS instance %s to %d GB\n", 
+						fmt.Printf("✅ Modified storage for RDS instance %s to %d GB\n",
 							instance.Identifier, instance.AllocatedStorage)
 						fmt.Printf("   Note: Storage modification is in progress and may take several minutes to complete\n")
 					}
 				} else {
-					fmt.Printf("✅ RDS instance %s already exists with correct storage size (%d GB)\n", 
+					fmt.Printf("✅ RDS instance %s already exists with correct storage size (%d GB)\n",
 						instance.Identifier, currentStorage)
 				}
-				
+
 				// Check if instance class needs to be updated (safely handle nil pointer)
 				var currentInstanceClass string
 				if existingInstance.DBInstanceClass != nil {
 					currentInstanceClass = *existingInstance.DBInstanceClass
 				}
-				
+
 				if currentInstanceClass != "" && currentInstanceClass != instance.InstanceClass {
-					fmt.Printf("Instance class change detected (%s -> %s), but not implemented in this version\n", 
+					fmt.Printf("Instance class change detected (%s -> %s), but not implemented in this version\n",
 						currentInstanceClass, instance.InstanceClass)
 				}
-				
+
 				// Check if engine version needs to be updated (safely handle nil pointer)
 				var currentEngineVersion string
 				if existingInstance.EngineVersion != nil {
 					currentEngineVersion = *existingInstance.EngineVersion
 				}
-				
-				if instance.EngineVersion != "" && currentEngineVersion != "" && 
-				   currentEngineVersion != instance.EngineVersion {
-					fmt.Printf("Engine version change detected (%s -> %s), but not implemented in this version\n", 
+
+				if instance.EngineVersion != "" && currentEngineVersion != "" &&
+					currentEngineVersion != instance.EngineVersion {
+					fmt.Printf("Engine version change detected (%s -> %s), but not implemented in this version\n",
 						currentEngineVersion, instance.EngineVersion)
 				}
 			}
 		}
 	}
-	
+
 	return nil
 }
